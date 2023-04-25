@@ -1,0 +1,105 @@
+name: release-verification
+on: [push, pull_request]
+
+env:
+  # per release
+  GPG_KEY: 207B40DBDA2A9EFB98FDA2AC37693EDB2EA9085E
+  GPG_UID: Kezhu Wang (CODE SIGNING KEY) <kezhuw@apache.org>
+  VERSION: 5.5.0
+  MAVEN_REPO: https://repository.apache.org/content/repositories/orgapachecurator-1056/
+
+  # constants
+  DIST_REPO: https://dist.apache.org/repos/dist/dev/curator
+
+jobs:
+  checksum:
+    runs-on: ubuntu-latest
+    steps:
+      - name: set envs
+        run: |
+          echo "DIST_FILENAME=${{ 'apache-curator-$VERSION-source-release.zip' }}" >> $GITHUB_ENV
+      - name: install packages
+        run: sudo apt install -y lftp gpg parallel
+      - name: import gpg keys
+        run: curl -L https://www.apache.org/dist/curator/KEYS | gpg --import
+      - name: mirror dist repo
+        run: lftp -c mirror ${{ env.DIST_REPO }}/${{ env.VERSION }} dist
+      - name: check dist gpg
+        run: gpg --verify dist/${{ env.DIST_FILENAME }}.asc 2>&1 | grep -C 10 'Good signature from "${{ env.GPG_UID }}"' | grep -C 10 ${{ env.GPG_KEY }}
+      - name: check dist sha512
+        run: echo "  dist/${{ env.DIST_FILENAME }}" >> dist/${{ env.DIST_FILENAME }}.sha512 && shasum -a 512 -c dist/${{ env.DIST_FILENAME }}.sha512
+      - name: mirror maven repo
+        run: lftp -c mirror ${{ env.MAVEN_REPO }} m2
+      - name: check maven sha1
+        run: |
+          find m2/org -name "*.pom" -or -name "*.jar" -or -name "*.xml" -or -name "*.zip" | parallel --tag "echo '  {}' >> {}.sha1"
+          find m2/org -name "*.pom" -or -name "*.jar" -or -name "*.xml" -or -name "*.zip" | parallel --tag "shasum -a 1 -c {}.sha1"
+      - name: check maven md5
+        run: |
+          find m2/org -name "*.pom" -or -name "*.jar" -or -name "*.xml" -or -name "*.zip" | parallel --tag "echo '  {}' >> {}.md5"
+          find m2/org -name "*.pom" -or -name "*.jar" -or -name "*.xml" -or -name "*.zip" | parallel --tag "md5sum -c {}.md5"
+      - name: check maven gpg
+        run: |
+          find m2/org -name "*.jar" | parallel --tag "gpg --verify {}.asc 2>&1 | grep -B 1 'Good signature from \"${{ env.GPG_UID }}\"' | grep -A 1 ${{ env.GPG_KEY }}"
+          find m2/org -name "*.pom" | parallel --tag "gpg --verify {}.asc 2>&1 | grep -B 1 'Good signature from \"${{ env.GPG_UID }}\"' | grep -A 1 ${{ env.GPG_KEY }}"
+          find m2/org -name "*.zip" | parallel --tag "gpg --verify {}.asc 2>&1 | grep -B 1 'Good signature from \"${{ env.GPG_UID }}\"' | grep -A 1 ${{ env.GPG_KEY }}"
+          find m2/org -name "*.xml" | grep -v metadata | parallel --tag "gpg --verify {}.asc 2>&1 | grep -B 1 'Good signature from \"${{ env.GPG_UID }}\"' | grep -A 1 ${{ env.GPG_KEY }}"
+
+  verify-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        java: [8, 11]
+    steps:
+      - name: Checkout curator source code
+        uses: actions/checkout@v3
+        with:
+          repository: apache/curator
+          ref: apache-curator-${{ env.VERSION }}
+          fetch-depth: 5
+      - name: Check git log
+        run: git log
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+      - name: Build and run tests with source code
+        run: ./mvnw verify
+
+  verify-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        java: [8, 11]
+    steps:
+      - name: Install packages
+        run: sudo apt install -y lftp tree
+      - name: Checkout curator source code
+        uses: actions/checkout@v3
+        with:
+          repository: apache/curator
+          ref: apache-curator-${{ env.VERSION }}
+          fetch-depth: 5
+      - name: Check git log
+        run: git log
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+      - name: Compile tests
+        # I found no way to compile solely tests, so delete no test classes after compiled.
+        run: |
+          ./mvnw test-compile
+          find . -name "classes" -or -name "generated-sources" | xargs rm -rf
+      - name: Mirror maven repo
+        run: lftp -c mirror ${{ env.MAVEN_REPO }} .m2
+      - name: Prepare env for staging jars
+        run: echo "STAGING_JARS=`find .m2 -name '*${{ env.VERSION }}.jar' -or -name '*${{ env.VERSION }}-tests.jar' | paste -sd , -`" >> $GITHUB_ENV
+      - name: Run tests with staging jars
+        # curator-examples has no tests.
+        # TestTransactionsNew and TestTransactionsOld uses shaded guava through public API. See CURATOR-670.
+        run: ./mvnw test --projects='!curator-examples' -Dtest='!TestTransactionsNew, !TestTransactionsOld' -Dmaven.main.skip -Dmaven.test.additionalClasspath=${{ env.STAGING_JARS }}
