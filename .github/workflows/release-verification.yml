@@ -3,10 +3,10 @@ on: [push, pull_request]
 
 env:
   # per release
-  GPG_KEY: 207B40DBDA2A9EFB98FDA2AC37693EDB2EA9085E
-  GPG_UID: Kezhu Wang (CODE SIGNING KEY) <kezhuw@apache.org>
-  VERSION: 5.5.0
-  MAVEN_REPO: https://repository.apache.org/content/repositories/orgapachecurator-1056/
+  GPG_KEY: 8B374472FAD328E17F479863B379691FC6E298DD
+  GPG_UID: Zili Chen (CODE SIGNING KEY) <tison@apache.org>
+  VERSION: 5.6.0
+  MAVEN_REPO: https://repository.apache.org/content/repositories/orgapachecurator-1057/
 
   # constants
   DIST_REPO: https://dist.apache.org/repos/dist/dev/curator
