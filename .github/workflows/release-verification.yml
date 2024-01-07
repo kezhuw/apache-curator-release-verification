@@ -7,6 +7,7 @@ env:
   GPG_UID: Zili Chen (CODE SIGNING KEY) <tison@apache.org>
   VERSION: 5.6.0
   MAVEN_REPO: https://repository.apache.org/content/repositories/orgapachecurator-1057/
+  PGP_KEYS: https://downloads.apache.org/curator/KEYS
 
   # constants
   DIST_REPO: https://dist.apache.org/repos/dist/dev/curator
@@ -21,7 +22,7 @@ jobs:
       - name: install packages
         run: sudo apt install -y lftp gpg parallel
       - name: import gpg keys
-        run: curl -L https://www.apache.org/dist/curator/KEYS | gpg --import
+        run: curl -L ${{ env.PGP_KEYS }} | gpg --import
       - name: mirror dist repo
         run: lftp -c mirror ${{ env.DIST_REPO }}/${{ env.VERSION }} dist
       - name: check dist gpg
