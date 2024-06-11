@@ -5,8 +5,8 @@ env:
   # per release
   GPG_KEY: 8B374472FAD328E17F479863B379691FC6E298DD
   GPG_UID: Zili Chen (CODE SIGNING KEY) <tison@apache.org>
-  VERSION: 5.6.0
-  MAVEN_REPO: https://repository.apache.org/content/repositories/orgapachecurator-1057/
+  VERSION: 5.7.0
+  MAVEN_REPO: https://repository.apache.org/content/repositories/orgapachecurator-1058/
   PGP_KEYS: https://downloads.apache.org/curator/KEYS
 
   # constants
