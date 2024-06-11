@@ -48,7 +48,6 @@ jobs:
 
   verify-source:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
     strategy:
       matrix:
         java: [8, 11]
@@ -71,7 +70,6 @@ jobs:
 
   verify-artifacts:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
     strategy:
       matrix:
         java: [8, 11]
