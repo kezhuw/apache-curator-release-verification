@@ -24,7 +24,7 @@ jobs:
       - name: import gpg keys
         run: curl -L ${{ env.PGP_KEYS }} | gpg --import
       - name: mirror dist repo
-        run: lftp -c mirror ${{ env.DIST_REPO }}/${{ env.VERSION }} dist
+        run: lftp -c mirror ${{ env.DIST_REPO }} dist
       - name: check dist gpg
         run: gpg --verify dist/${{ env.DIST_FILENAME }}.asc 2>&1 | grep -C 10 'Good signature from "${{ env.GPG_UID }}"' | grep -C 10 ${{ env.GPG_KEY }}
       - name: check dist sha512
