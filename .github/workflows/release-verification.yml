@@ -6,7 +6,7 @@ env:
   GPG_KEY: 207B40DBDA2A9EFB98FDA2AC37693EDB2EA9085E
   GPG_UID: Kezhu Wang (CODE SIGNING KEY) <kezhuw@apache.org>
   VERSION: 5.9.0
-  MAVEN_REPO: https://repository.apache.org/content/repositories/orgapachecurator-1061/
+  MAVEN_REPO: https://repository.apache.org/content/repositories/orgapachecurator-1062/
   PGP_KEYS: https://downloads.apache.org/curator/KEYS
 
   # constants
